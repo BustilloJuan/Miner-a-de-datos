@@ -1,0 +1,158 @@
+---
+title: "Caret"
+author: "Juan Fernández Bustillo"
+date: "14/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+En primer lugar cargaremos la base de datos sobre la que vamos a trabajar:
+Con 60 varibles numericas de 208 observaciones trataremos de predecir si son de clase M (metal) o R (roca):
+```{r}
+library(mlbench)
+data("Sonar")
+datos<-Sonar
+levels(datos$Class)
+```
+
+En cuanto a la construcción del modelo, el primer paso es dividir los datos en dos subconjuntos, uno de entrenamiento y otro de test, para ello usaremos la funcion "createdatapartition" del paquete caret.
+```{r}
+library(caret)
+subconjunto<-createDataPartition(y=datos$Class, #La clase 
+                             p=.75, #Porcentaje para entrenamiento
+                             list=F) #Formato salida
+```
+
+Separamos los datos
+```{r}
+entrena<-datos[subconjunto,]
+test<-datos[-subconjunto,]
+nrow(entrena)+nrow(test) #Para confirmar que no me dejo ninguna observación
+```
+
+El primer modelo que voy a crear esta basado en el algoritmo(árbol) C4.5:
+Como hay presentes algunos NA
+
+```{r}
+c4.5Fit <- train(
+Class ~ .,
+data = entrena,
+method = "J48"
+)
+c4.5Fit
+```
+Podemos ajustar el aprendizaje, para tratar de obtener otros modelo u obtener mejores reultados:
+<br>
+Ahora vamos a probar combinando 2 relaciones de parámetros:
+
+```{r}
+c4.5 <- train(
+Class ~ .,
+data = entrena,
+method = "J48",
+tuneLength=2
+)
+c4.5
+```
+Eligiendo nosotros el valor de los parámetros:
+```{r}
+valores<-expand.grid(C=c(0.4,0.3),M=c(3,5,6))
+c4.5 <- train(
+Class ~ .,
+data = entrena,
+method = "J48",
+tuneGrid=valores
+)
+c4.5
+```
+Ahora vamos a cambiar el método de muestreo para ver si cambian los resultados:
+```{r}
+ctrl<-trainControl(method = "repeatedcv",repeats = 3)
+c4.5 <- train(
+Class ~ .,
+data = entrena,
+method = "J48",
+tuneGrid=valores,
+trControl=ctrl
+)
+c4.5
+```
+
+Vamos a introducir cómo indicador de bondad la curva Roc, para ello activaremos las probabilidades:
+```{r}
+
+ctrl<-trainControl(method = "repeatedcv",repeats = 3,
+                   summaryFunction = twoClassSummary,
+                  classProbs = T)
+c4.5 <- train(
+Class ~ .,
+data = entrena,
+method = "J48",
+tuneGrid=valores,
+trControl=ctrl,
+metric="ROC"
+)
+c4.5
+```
+```{r}
+ggplot(c4.5)
+```
+Aplicamos el modelo a los datos de test:
+```{r}
+clases<-predict(c4.5,newdata = test) #type="prob";
+clases
+```
+```{r}
+confusionMatrix(data=clases,test$Class)
+```
+Viendo los malos resultados de este modelo vamos a probar con el algoritmo de "knn" vecinos:
+```{r}
+ctrl<-trainControl(method = "repeatedcv",repeats = 3,
+                   summaryFunction = twoClassSummary,
+                   classProbs = T)
+c4.5 <- train(
+Class ~ .,
+data = entrena,
+method = "J48",
+tuneGrid=valores,
+trControl=ctrl,
+metric="ROC"
+)
+c4.5
+```
+
+```{r}
+knn <- train(
+Class ~ .,
+data = entrena,
+method = "knn"
+)
+knn
+```
+```{r}
+knngrid<-data.frame(k=(0:2)*2+1)
+knn <- train(
+Class ~ .,
+data = entrena,
+method = "knn",
+tuneGrid=knngrid,
+trControl=ctrl,
+metric="ROC"
+)
+knn
+```
+Comparar modelo con los datos de test:
+```{r}
+clasesknn<-predict(knn,newdata = test) #type="prob";
+clasesknn
+```
+```{r}
+CF<-confusionMatrix(clasesknn,test$Class);CF
+```
+
+
+
+
