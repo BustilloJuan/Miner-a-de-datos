@@ -1,0 +1,62 @@
+---
+title: "Caso Wifi"
+author: "Juan Fernández Bustillo"
+date: "15/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+file.choose()
+```
+```{r}
+wifi<-read.csv("C:\\Users\\34634\\Desktop\\Algoritmos de Machine Learning\\wifi (1).csv")
+head(wifi)
+```
+```{r}
+str(wifi)
+```
+Vamos a convertir la última columna en clase factor:
+```{r}
+wifi$V8<-as.factor(wifi$V8)
+levels(wifi$V8)
+```
+Voy a tratar el resto de variables como numericas:
+```{r}
+for (i in 1:7){
+  wifi[,i]<-as.numeric(wifi[,i])
+}
+str(wifi)
+```
+
+Voy a convertir las columnas en fila usando V8 como identificador:
+```{r}
+library(reshape2)
+head(melt(wifi,4))
+```
+```{r}
+library(ggplot2)
+ggplot(melt(wifi),aes(x=value,color=V8))+
+  geom_density()+
+  facet_grid(V8~variable)
+```
+Usando caret para realizar un primer modelo (árbol):
+```{r}
+c4.5 <- train(
+V8 ~ .,
+data = wifi,
+method = "J48"
+)
+c4.5
+```
+Ver el árbol:
+```{r}
+c4.5$finalModel
+```
+```{r}
+plot(c4.5$finalModel)
+```
+
