@@ -1,0 +1,51 @@
+---
+title: "Red Neuronal"
+author: "Juan Fernández Bustillo"
+date: "15/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+En esta base de datos trabajaremos con la vocal que pronuncia una persona, en función de diferentes parámetros del sonido producido:
+```{r}
+data("Vowel")
+head(Vowel)
+datos<-Vowel[,-1]
+levels(datos$Class)
+library(caret)
+
+subconjunto<-createDataPartition(y=datos$Class, #La clase del cancer
+                                 p=.75, #Porcentaje para entrenamiento
+                                 list=F) #Formato salida
+
+entrena<-datos[subconjunto,]
+test<-datos[-subconjunto,]
+nrow(datos)
+nrow(entrena)+nrow(test) #Para confirmar que no me dejo ninguna observación
+```
+
+```{r}
+ctrl<-trainControl(method = "boot632",
+                   number=10)
+nn1L<- train(
+  Class ~ .,
+  data = entrena,
+  method = "mlp",
+  trControl=ctrl,
+  tuneGrid=data.frame(size=seq(27,29,1))
+  )
+nn1L
+```
+```{r}
+ggplot(nn1L)
+```
+
+Representar redes neuronales:
+```{r}
+library(NeuralNetTools)
+plotnet(nn1L$finalModel,x_names=names(entrena)[1:9],y_names=levels(entrena$Class))
+```
+
